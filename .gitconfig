@@ -5,4 +5,4 @@
 	ui = auto
 [commit]
 [core]
-	; editor = nvim
+	editor = vim
