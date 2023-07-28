@@ -1,0 +1,8 @@
+[user]
+        email = spring_reader@hotmail.com
+        name = spring-reader
+[color]
+	ui = auto
+[commit]
+[core]
+	editor = vim
