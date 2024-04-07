@@ -7,6 +7,7 @@ SERVER_PORT=${1:-8080}
 WORK_DIR=`cd $(dirname $0); pwd;`
 WORK_QUIET=${2:-1}
 
+export READER_PID=$$
 
 source ${WORK_DIR}/proxy.sh
 #proxy_ip=
@@ -19,6 +20,7 @@ fi
 # DOCKER_COMPOSE="docker-compose"
 BACKUP_PID=
 JAVA_PID=
+CHECK_UPDATE_PID=
 READER_JAR_STATIC_VERSION="3.2.6"
 
 # locale-gen en_US.UTF-8
@@ -40,7 +42,7 @@ case $(arch) in
 		;;
 esac
 
-trap 'kill $BACKUP_PID $JAVA_PID' EXIT SIGKILL
+trap 'kill $BACKUP_PID $JAVA_PID $CHECK_UPDATE_PID ' EXIT SIGKILL
 
 install_java() {
 	java -h &> /dev/null
@@ -146,6 +148,28 @@ install_reader_in_docker() {
 	# docker-compose stop
 }
 
+check_update() {
+	local check_interval=$1
+	local pid=$2
+
+	while true; do
+		local tag2=$(wget -qO- -t1 -T2 "https://api.github.com/repos/hectorqin/reader/releases/latest" | grep "tag_name" | head -n 1 | awk -F "v" '{print $2}' | sed 's/\"//g;s/,//g;s/ //g')
+		if [[ $? != 0 ]] || [[ -z "$tag2" ]]; then
+			echo "WARN: reader jar check update failed."
+			continue
+		fi
+
+		local file_name=$(basename reader*.jar)
+
+		if [[ "${file_name}" =~ "${tag2}" ]]; then
+			check_interval=$((check_interval + $RANDOM))
+			sleep $check_interval
+		else
+			kill $pid
+		fi
+	done
+}
+
 reader_jar_get_latest() {
 
 	install_jq
@@ -183,12 +207,15 @@ reader_jar_download() {
 	fi
 }
 
-install_in_host() {
+run_in_host() {
 
 	killall java
 	install_java
 
 	reader_jar_download
+
+	check_update $CHECK_UPDATE_DAYS $READER_PID &
+	CHECK_UPDATE_PID=$!
 
 	RUN_ARGS=""
 	local inviteCode="guanliyuanzuishuai"
@@ -211,21 +238,19 @@ install_in_host() {
 	exit 255
 }
 
-install_in_docker() {
+run_in_docker() {
 	install_docker_compose
 	install_reader_in_docker
 }
 
 auto_backup() {
-	git checkout .
-	git checkout main
-	git pull
-	bash $WORK_DIR/backup.sh &
+	bash $WORK_DIR/backup.sh $READER_PID &
 	BACKUP_PID=$!
 
 	# wait data restore
+	sleep 5
 	while [[ ! -e "${WORK_DIR}/storage" ]]; do
-		sleep 1
+		sleep 5
 	done
 }
 
@@ -235,7 +260,7 @@ cd $WORK_DIR
 auto_backup
 
 if [[ ! -n "$3" ]]; then
-	install_in_host
+	run_in_host
 else
-	install_in_docker
+	run_in_docker
 fi
