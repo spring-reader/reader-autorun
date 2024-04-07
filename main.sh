@@ -5,6 +5,8 @@ WORK_DIR=`cd $(dirname $0); pwd;`
 TIMEOUT_DAYS=$((1 * 24 * 60 * 60))  # 1days
 MAIN_SELF=$$
 
+source ${WORK_DIR}/proxy.sh
+
 trap 'kill $RESTART_SELF_PID $READER_PID' EXIT SIGKILL
 
 

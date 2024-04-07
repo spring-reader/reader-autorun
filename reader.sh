@@ -7,6 +7,15 @@ SERVER_PORT=${1:-8080}
 WORK_DIR=`cd $(dirname $0); pwd;`
 WORK_QUIET=${2:-1}
 
+
+source ${WORK_DIR}/proxy.sh
+#proxy_ip=
+#proxy_port=
+JAVA_PROXY=
+if [[ -n ${proxy_ip} ]] && [[ -n ${proxy_port} ]]; then
+	JAVA_PROXY="-Dhttp.proxyHost=$proxy_ip -Dhttp.proxyPort=$proxy_port -Dhttps.proxyHost=$proxy_ip -Dhttps.proxyPort=$proxy_port"
+fi
+
 # DOCKER_COMPOSE="docker-compose"
 BACKUP_PID=
 JAVA_PID=
@@ -191,14 +200,14 @@ install_in_host() {
 	fi
 
 	if [[ $WORK_QUIET = 1 ]]; then
-		java -jar reader*.jar --reader.server.port=$SERVER_PORT $RUN_ARGS  &>/dev/null  &
+		java $JAVA_PROXY -jar reader*.jar --reader.server.port=$SERVER_PORT $RUN_ARGS  &>/dev/null  &
 		JAVA_PID=$!
 	else
-		java -jar reader*.jar --reader.server.port=$SERVER_PORT $RUN_ARGS &
+		java $JAVA_PROXY -jar reader*.jar --reader.server.port=$SERVER_PORT $RUN_ARGS &
 		JAVA_PID=$!
 	fi
 
-	wait
+	wait $JAVA_PID
 	exit 255
 }
 
