@@ -5,7 +5,7 @@ WORK_DIR=`cd $(dirname $0); pwd;`
 export CHECK_UPDATE_DAYS=$((1 * 24 * 60 * 60))  # 1days
 MAIN_SELF=$$
 
-source ${WORK_DIR}/proxy.sh
+source ${WORK_DIR}/config.sh
 
 trap 'kill $CHECK_UPDATE_PID $READER_PID' EXIT SIGKILL
 

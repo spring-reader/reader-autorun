@@ -9,9 +9,10 @@ WORK_QUIET=${2:-1}
 
 export READER_PID=$$
 
-source ${WORK_DIR}/proxy.sh
+source ${WORK_DIR}/config.sh
 #proxy_ip=
 #proxy_port=
+CONF_READER_STATIC_VERSION=${static_version}
 JAVA_PROXY=
 if [[ -n ${proxy_ip} ]] && [[ -n ${proxy_port} ]]; then
 	JAVA_PROXY="-Dhttp.proxyHost=$proxy_ip -Dhttp.proxyPort=$proxy_port -Dhttps.proxyHost=$proxy_ip -Dhttps.proxyPort=$proxy_port"
@@ -21,7 +22,7 @@ fi
 BACKUP_PID=
 JAVA_PID=
 CHECK_UPDATE_PID=
-READER_JAR_STATIC_VERSION="3.2.6"
+READER_JAR_STATIC_VERSION="3.2.7"
 
 # locale-gen en_US.UTF-8
 export LC_ALL=en_US.UTF-8
@@ -152,6 +153,10 @@ check_update() {
 	local check_interval=$1
 	local pid=$2
 
+	if [[ -n $CONF_READER_STATIC_VERSION ]]; then
+		return
+	fi
+
 	while true; do
 		local tag2=$(wget -qO- -t1 -T2 "https://api.github.com/repos/hectorqin/reader/releases/latest" | grep "tag_name" | head -n 1 | awk -F "v" '{print $2}' | sed 's/\"//g;s/,//g;s/ //g')
 		if [[ $? != 0 ]] || [[ -z "$tag2" ]]; then
@@ -199,7 +204,8 @@ reader_jar_get_static() {
 }
 
 reader_jar_download() {
-	reader_jar_get_latest
+
+	[[ -n $CONF_READER_STATIC_VERSION ]] || reader_jar_get_latest
 	[[ -e $(basename reader*.jar) ]] || reader_jar_get_static
 	if [[ ! -e $(basename reader*.jar) ]]; then
 		echo "ERR: jar get failed."
